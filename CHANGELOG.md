@@ -5,6 +5,54 @@ All notable changes to GoHarvest will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-10-03
+
+### Added
+- ✅ **Selective Harvesting** - Added `DateRange` parameter to `Harvest()` for date-based filtering
+- ✅ **From/Until Date Filtering** - Support for `from` and `until` OAI-PMH parameters
+- ✅ **Flexible Date Range** - Can specify `From` only, `Until` only, or both
+- ✅ **Test Coverage** - Added comprehensive tests for date range filtering
+- ✅ **Documentation** - Updated README with date range examples (Examples 3-5)
+
+### Changed
+- 🔄 **Harvest API Signature** - `Harvest(metadataPrefix string, dateRange *DateRange, callback HarvestCallback) error`
+- 🔄 **Internal Parser Functions** - Updated to pass `dateRange` through the chain
+- 🔄 **HTTP Request Builder** - Enhanced `performListRecordsRequest()` to include date parameters
+- 🔄 **Resumption Token Logic** - Automatically clears `dateRange` after first request (embedded in token)
+
+### Fixed
+- 🐛 **Date Range with Resumption Tokens** - Correctly handles date range only on initial request
+- 🐛 **Backward Compatibility** - Legacy APIs pass `nil` for dateRange parameter
+
+### Migration Guide
+
+**From v1.0.0 to v1.1.0:**
+
+```go
+// Before (v1.0.0)
+client.Harvest("marcxml", func(response goharvest.OAIResponse) error {
+    // process records
+})
+
+// After (v1.1.0) - No date filtering
+client.Harvest("marcxml", nil, func(response goharvest.OAIResponse) error {
+    // process records
+})
+
+// After (v1.1.0) - With date filtering
+dateRange := &goharvest.DateRange{
+    From:  "2025-01-01",
+    Until: "2025-12-31",
+}
+client.Harvest("marcxml", dateRange, func(response goharvest.OAIResponse) error {
+    // process records
+})
+```
+
+**Breaking Change:** The `Harvest()` function signature has changed. All calls must include the `dateRange` parameter (use `nil` for no filtering).
+
+---
+
 ## [1.0.0] - 2025-10-03
 
 ### Added

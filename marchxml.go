@@ -132,7 +132,7 @@ func (c *OAIClient) HarvestAll(metadataPrefix string, callback func(*OAIPMHRespo
 	resumptionToken := ""
 
 	for {
-		resp, err := c.listRecordsRequestMARCXML(metadataPrefix, resumptionToken)
+		resp, err := c.listRecordsRequestMARCXML(metadataPrefix, resumptionToken, nil)
 		if err != nil {
 			return err
 		}

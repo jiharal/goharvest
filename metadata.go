@@ -33,3 +33,12 @@ type OAIResponse interface {
 
 // HarvestCallback is the callback function type for harvest operations
 type HarvestCallback func(response OAIResponse) error
+
+// DateRange represents the date range filter for selective harvesting
+// Dates should be in UTC and formatted as YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ
+type DateRange struct {
+	// From specifies the lower bound (inclusive) for datestamp-based selective harvesting
+	From string
+	// Until specifies the upper bound (inclusive) for datestamp-based selective harvesting
+	Until string
+}

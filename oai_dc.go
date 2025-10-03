@@ -159,7 +159,7 @@ func (c *OAIClient) HarvestAllDC(metadataPrefix string, callback func(*OAIPMHRes
 	resumptionToken := ""
 
 	for {
-		resp, err := c.listRecordsRequestDC(metadataPrefix, resumptionToken)
+		resp, err := c.listRecordsRequestDC(metadataPrefix, resumptionToken, nil)
 		if err != nil {
 			return err
 		}

@@ -38,7 +38,8 @@ func main() {
     client := goharvest.NewClient("https://balaiyanpus.jogjaprov.go.id/opac/oai")
 
     // Unified Harvest - otomatis detect format
-    err := client.Harvest("marcxml", func(response goharvest.OAIResponse) error {
+    // Pass nil untuk dateRange jika tidak perlu filter tanggal
+    err := client.Harvest("marcxml", nil, func(response goharvest.OAIResponse) error {
         records := response.GetRecords()
 
         for _, record := range records {
@@ -93,7 +94,7 @@ type OAIResponse interface {
 ```go
 client := goharvest.NewClient("https://balaiyanpus.jogjaprov.go.id/opac/oai")
 
-err := client.Harvest("marcxml", func(response goharvest.OAIResponse) error {
+err := client.Harvest("marcxml", nil, func(response goharvest.OAIResponse) error {
     records := response.GetRecords()
 
     for _, record := range records {
@@ -115,7 +116,7 @@ err := client.Harvest("marcxml", func(response goharvest.OAIResponse) error {
 ```go
 client := goharvest.NewClient("https://example.com/oai")
 
-err := client.Harvest("oai_dc", func(response goharvest.OAIResponse) error {
+err := client.Harvest("oai_dc", nil, func(response goharvest.OAIResponse) error {
     records := response.GetRecords()
 
     for _, record := range records {
@@ -132,7 +133,68 @@ err := client.Harvest("oai_dc", func(response goharvest.OAIResponse) error {
 })
 ```
 
-### Example 3: Generic Handler untuk Multiple Formats
+### Example 3: Harvest dengan Date Range Filter
+
+```go
+client := goharvest.NewClient("https://balaiyanpus.jogjaprov.go.id/opac/oai")
+
+// Harvest records dari periode tertentu (January 2025)
+dateRange := &goharvest.DateRange{
+    From:  "2025-01-01",
+    Until: "2025-01-31",
+}
+
+err := client.Harvest("marcxml", dateRange, func(response goharvest.OAIResponse) error {
+    records := response.GetRecords()
+
+    for _, record := range records {
+        metadata := record.ExtractMetadata()
+
+        if bookMeta, ok := metadata.(*goharvest.BookMetadata); ok {
+            fmt.Printf("Title: %s\n", bookMeta.Title)
+            fmt.Printf("Date: %s\n", bookMeta.PublicationYear)
+        }
+    }
+
+    return nil
+})
+```
+
+### Example 4: Harvest dari Tanggal Tertentu (From Only)
+
+```go
+client := goharvest.NewClient("https://balaiyanpus.jogjaprov.go.id/opac/oai")
+
+// Harvest semua records dari Oktober 2025 hingga sekarang
+dateRange := &goharvest.DateRange{
+    From: "2025-10-01",
+}
+
+err := client.Harvest("marcxml", dateRange, func(response goharvest.OAIResponse) error {
+    records := response.GetRecords()
+    fmt.Printf("Received %d records from October 2025 onwards\n", len(records))
+    return nil
+})
+```
+
+### Example 5: Harvest sampai Tanggal Tertentu (Until Only)
+
+```go
+client := goharvest.NewClient("https://balaiyanpus.jogjaprov.go.id/opac/oai")
+
+// Harvest semua records sampai Desember 2024
+dateRange := &goharvest.DateRange{
+    Until: "2024-12-31",
+}
+
+err := client.Harvest("oai_dc", dateRange, func(response goharvest.OAIResponse) error {
+    records := response.GetRecords()
+    fmt.Printf("Received %d records up to December 2024\n", len(records))
+    return nil
+})
+```
+
+### Example 6: Generic Handler untuk Multiple Formats
 
 ```go
 func handleMetadata(response goharvest.OAIResponse) error {
@@ -161,8 +223,8 @@ func handleMetadata(response goharvest.OAIResponse) error {
     return nil
 }
 
-client.Harvest("marcxml", handleMetadata)
-client.Harvest("oai_dc", handleMetadata)
+client.Harvest("marcxml", nil, handleMetadata)
+client.Harvest("oai_dc", nil, handleMetadata)
 ```
 
 ## Backward Compatibility
@@ -240,7 +302,7 @@ GoHarvest menggunakan **clean architecture** dengan separation of concerns:
 ## Error Handling
 
 ```go
-err := client.Harvest("marcxml", func(response goharvest.OAIResponse) error {
+err := client.Harvest("marcxml", nil, func(response goharvest.OAIResponse) error {
     // Check for OAI-PMH errors
     if response.HasError() {
         err := response.GetError()
@@ -281,6 +343,12 @@ type MetadataExtractor interface {
     ExtractMetadata() interface{}
     GetFormat() MetadataFormat
 }
+
+// DateRange - Date range filter for selective harvesting
+type DateRange struct {
+    From  string // Format: YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ
+    Until string // Format: YYYY-MM-DD or YYYY-MM-DDThh:mm:ssZ
+}
 ```
 
 ### Core Functions
@@ -290,7 +358,7 @@ type MetadataExtractor interface {
 func NewClient(baseURL string) *OAIClient
 
 // Harvest - Unified API (Recommended)
-func (c *OAIClient) Harvest(metadataPrefix string, callback HarvestCallback) error
+func (c *OAIClient) Harvest(metadataPrefix string, dateRange *DateRange, callback HarvestCallback) error
 
 // HarvestAll - Legacy MARCXML API (Backward Compatible)
 func (c *OAIClient) HarvestAll(metadataPrefix string, callback func(*OAIPMHResponse) error) error
@@ -340,9 +408,13 @@ client.HarvestAllDC("oai_dc", dcCallback)
 
 **After:**
 ```go
-// Single unified call
-client.Harvest("marcxml", unifiedCallback)
-client.Harvest("oai_dc", unifiedCallback)
+// Single unified call with optional date filtering
+client.Harvest("marcxml", nil, unifiedCallback)
+client.Harvest("oai_dc", nil, unifiedCallback)
+
+// With date range
+dateRange := &goharvest.DateRange{From: "2025-01-01", Until: "2025-12-31"}
+client.Harvest("marcxml", dateRange, unifiedCallback)
 ```
 
 **Benefits:**
@@ -359,7 +431,7 @@ GoHarvest automatically handles pagination via resumption tokens:
 
 ```go
 // Automatic pagination - no manual token management needed
-client.Harvest("marcxml", func(response goharvest.OAIResponse) error {
+client.Harvest("marcxml", nil, func(response goharvest.OAIResponse) error {
     // Process each batch
     records := response.GetRecords()
     fmt.Printf("Processing %d records\n", len(records))
@@ -370,7 +442,7 @@ client.Harvest("marcxml", func(response goharvest.OAIResponse) error {
 ### Error Handling Best Practices
 
 ```go
-client.Harvest("marcxml", func(response goharvest.OAIResponse) error {
+client.Harvest("marcxml", nil, func(response goharvest.OAIResponse) error {
     // 1. Check OAI-PMH level errors
     if response.HasError() {
         err := response.GetError()
@@ -399,7 +471,7 @@ For large datasets, process in batches:
 
 ```go
 totalRecords := 0
-client.Harvest("marcxml", func(response goharvest.OAIResponse) error {
+client.Harvest("marcxml", nil, func(response goharvest.OAIResponse) error {
     records := response.GetRecords()
     totalRecords += len(records)
 

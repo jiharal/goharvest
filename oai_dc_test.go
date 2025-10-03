@@ -84,7 +84,7 @@ func TestParseOAIDCXML(t *testing.T) {
 	client := NewClient("https://eprints.uad.ac.id/cgi/oai2")
 
 	// Fetch one batch
-	resp, err := client.listRecordsRequestDC("oai_dc", "")
+	resp, err := client.listRecordsRequestDC("oai_dc", "", nil)
 	if err != nil {
 		t.Fatalf("Error fetching data: %v", err)
 	}
